@@ -168,7 +168,7 @@ def ensure_all_keys(parameters):
 # 9A) (Old) Function to log into the SurveyLM platform using provided credentials
 # NOTE: you can either supply these directly or set environment variables, create config ini files, etc
 # E.g., export SURVEYLM_USERNAME="Your Name", etc
-def login(driver, user_name = os.getenv('SURVEYLM_USERNAME'), user_id = os.getenv('SURVEYLM_USERID'), email = os.getenv('SURVEYLM_EMAIL'), password = os.getenv('SURVEYLM_PASSWORD'), api_key = os.getenv('SURVEYLM_APIKEY'),wait_time=3):
+def login(driver, user_name, user_id = os.getenv('SURVEYLM_USERID'), email = os.getenv('SURVEYLM_EMAIL'), password = os.getenv('SURVEYLM_PASSWORD'), api_key = os.getenv('SURVEYLM_APIKEY'),wait_time=3):
     # First, make sure you are in the "Platform" page
     wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//a[@data-testid='stSidebarNavLink']",'Platform'))
     time.sleep(wait_time)
@@ -527,7 +527,8 @@ def wait_for_event_completion(driver, which_process, wait_time=5, max_faults=10)
         'start_simulation': 'Simulation completed successfully',
         'stop_simulation': 'The simulation has been stopped',
         'survey_upload': 'Survey data uploaded successfully',
-        'agent_upload': 'agents were created successfully',
+        'agent_upload_old': 'agents were created successfully', # NOTE: old version
+        'agent_upload': 'agents were created sucessfully',
         'erase_data': 'The data was erased successfully',
         'page_refresh': 'The app has been refreshed'
     }
@@ -562,7 +563,7 @@ def wait_for_event_completion(driver, which_process, wait_time=5, max_faults=10)
                 done += 1
                 #break
             elif any(error_text in alert_text for error_text in ['Something went wrong', 'There is no data to erase',
-                                                                 'No completed simulation data was found',
+                                                                 'No completed simulation data was found', 'Object of type Decimal is not JSON serializable',
                                                                  'You have not started a survey yet']): # 'Error', 'Warning'
                 print(f"Warning: Something went wrong during the process of '{which_process}'. Here is the UI message: {alert_text}")
                 done += 1
@@ -632,22 +633,27 @@ def download_results(driver,wait_time=5):
     # Open up the "Results" sub-menu
     #open_results_submenu(driver)
     # Now lets try to download the data
-    wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
+    wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     try:
         #open_results_submenu(driver)
-        wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//button[@kind='secondary' and @data-testid='baseButton-secondary']","Download Usage Data", max_retry=2), max_retry=2)
+        #wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//button[@kind='secondary' and @data-testid='baseButton-secondary']","Download Usage Data", max_retry=2), max_retry=2)
+        wait_and_click_element(driver, find_element_from_elements_via_text(driver,
+                                                                           ".//button[@kind='secondary' and @data-testid='stBaseButton-secondary']",
+                                                                           "Download Usage Data", max_retry=2),
+                               max_retry=2)
     except:
         print("No 'usage' data available for download.")
-    wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
+    wait_and_click_element(driver, find_element_from_elements_via_text(driver,".//button[@data-testid='stBaseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
+    #wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     try:
         #open_results_submenu(driver)
-        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@kind='secondary' and @data-testid='baseButton-secondary']","Download Completed Data", max_retry=2), max_retry=2)
+        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@kind='secondary' and @data-testid='stBaseButton-secondary']","Download Completed Data", max_retry=2), max_retry=2)
     except:
         print("No 'completed' data available for download.")
-    wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
+    wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     try:
         #open_results_submenu(driver)
-        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","Download Uncompleted Data", max_retry=1), max_retry=1);
+        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","Download Uncompleted Data", max_retry=1), max_retry=1);
     except:
         print("No 'uncompleted' data available for download.")
 
@@ -748,8 +754,8 @@ def process_all_files(driver, parameters, download_path, start_folder=".", wait_
                             # upload_files(driver, question_path, agent_path)
                             driver.get("https://surveylm.panalogy-lab.com/Platform");
                             time.sleep(wait_time);
-                            #new_login(driver, email, password, api_key)
-                            new_login(driver)
+                            new_login(driver, email, password, api_key)
+                            #new_login(driver)
                             upload_files_new(driver, question_path, agent_path)
                             # Determine which parameters to use:
                             #    - Start with a shallow copy of default `parameters`
@@ -802,9 +808,9 @@ if __name__ == "__main__":
     # Load credentials from environment variables
     #username = SURVEYLM_USERNAME = "Steve Bickley"
     #userid = os.getenv('SURVEYLM_USERID')
-    #email = os.getenv('SURVEYLM_EMAIL')
-    #password = os.getenv('SURVEYLM_PASSWORD')
-    #api_key = os.getenv('SURVEYLM_APIKEY')
+    email = os.getenv('SURVEYLM_EMAIL')
+    password = os.getenv('SURVEYLM_PASSWORD')
+    api_key = os.getenv('SURVEYLM_APIKEY')
     # Set parameters dictionary
     parameters = {"batch_survey": False, "reset_parameters": False, "test_run": False, "test_q": 5,
                   "model": "GPT-4o-mini", "top_p_low": 0.00, "top_p_high": 0.00,
