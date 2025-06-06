@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "surveylm-simrunner"
+version = "0.1.0"
+description = ""
+authors = ["Steve Bickley"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+selenium = "^4.33.0"
+tqdm = "^4.67.1"
+numpy = "^2.2.6"
+pandas = "^2.3.0"
+openpyxl = "^3.1.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

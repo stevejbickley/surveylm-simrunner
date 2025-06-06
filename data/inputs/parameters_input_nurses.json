@@ -1,0 +1,17 @@
+{
+  "batch_survey": true,
+  "reset_parameters": false,
+  "test_run": false,
+  "test_q": 5,
+  "model": "GPT-4o",
+  "temperature_low": 0.20,
+  "temperature_high": 0.80,
+  "top_p_low": 0.80,
+  "top_p_high": 1.00,
+  "max_retries": 5,
+  "agent_role": ["Person", "Assistant"],
+  "justification": ["Yes", "No"],
+  "critic": ["No"],
+  "agent_role_prob_dist": "0.8;0.2",
+  "justification_prob_dist": "0.8;0.2"
+}
