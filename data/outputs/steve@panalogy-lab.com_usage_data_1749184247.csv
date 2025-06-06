@@ -1,2 +1,2 @@
 ,simulation id,user id,created,reset,number of agents,number of survey questions,total number of questions,total number of completed questions,total number of uncompleted questions,roles,models,estimated costs,prompt tokens,completion tokens,accumulated costs,actual costs
-0,1749182707,steve@panalogy-lab.com,2025-06-06 04:05:15+00:00,False,5,3,15,15,0,"[""Person"", ""Assistant""]",GPT-4o,"{""min"": 0.013262500000000002, ""max"": 0.04271250000000001}",3248,1067,1334.6631,0.01879
+0,1749184247,steve@panalogy-lab.com,2025-06-06 04:30:54+00:00,False,5,3,15,15,0,"[""Person"", ""Assistant""]",GPT-4o,"{""min"": 0.0131575, ""max"": 0.0423475}",3198,632,1334.7102,0.014315001
