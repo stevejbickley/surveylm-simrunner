@@ -168,7 +168,7 @@ def ensure_all_keys(parameters):
 # 9A) (Old) Function to log into the SurveyLM platform using provided credentials
 # NOTE: you can either supply these directly or set environment variables, create config ini files, etc
 # E.g., export SURVEYLM_USERNAME="Your Name", etc
-def login(driver, user_name, user_id, email, password, api_key,wait_time=3):
+def login(driver, user_name = os.getenv('SURVEYLM_USERNAME'), user_id = os.getenv('SURVEYLM_USERID'), email = os.getenv('SURVEYLM_EMAIL'), password = os.getenv('SURVEYLM_PASSWORD'), api_key = os.getenv('SURVEYLM_APIKEY'),wait_time=3):
     # First, make sure you are in the "Platform" page
     wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//a[@data-testid='stSidebarNavLink']",'Platform'))
     time.sleep(wait_time)
@@ -182,7 +182,7 @@ def login(driver, user_name, user_id, email, password, api_key,wait_time=3):
 
 
 # 9B) (New) Function to log into the SurveyLM platform using provided credentials
-def new_login(driver, email, password, api_key,wait_time=3):
+def new_login(driver, email = os.getenv('SURVEYLM_EMAIL'), password = os.getenv('SURVEYLM_PASSWORD'), api_key = os.getenv('SURVEYLM_APIKEY'),wait_time=3):
     # First, make sure you are in the "Platform" page
     wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//a[@data-testid='stSidebarNavLink']",'Platform'))
     time.sleep(wait_time)
@@ -748,7 +748,8 @@ def process_all_files(driver, parameters, download_path, start_folder=".", wait_
                             # upload_files(driver, question_path, agent_path)
                             driver.get("https://surveylm.panalogy-lab.com/Platform");
                             time.sleep(wait_time);
-                            new_login(driver, email, password, api_key)
+                            #new_login(driver, email, password, api_key)
+                            new_login(driver)
                             upload_files_new(driver, question_path, agent_path)
                             # Determine which parameters to use:
                             #    - Start with a shallow copy of default `parameters`
@@ -801,9 +802,9 @@ if __name__ == "__main__":
     # Load credentials from environment variables
     #username = SURVEYLM_USERNAME = "Steve Bickley"
     #userid = os.getenv('SURVEYLM_USERID')
-    email = os.getenv('SURVEYLM_EMAIL')
-    password = os.getenv('SURVEYLM_PASSWORD')
-    api_key = os.getenv('SURVEYLM_APIKEY')
+    #email = os.getenv('SURVEYLM_EMAIL')
+    #password = os.getenv('SURVEYLM_PASSWORD')
+    #api_key = os.getenv('SURVEYLM_APIKEY')
     # Set parameters dictionary
     parameters = {"batch_survey": False, "reset_parameters": False, "test_run": False, "test_q": 5,
                   "model": "GPT-4o-mini", "top_p_low": 0.00, "top_p_high": 0.00,
