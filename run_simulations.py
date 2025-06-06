@@ -655,6 +655,8 @@ def download_results(driver,wait_time=5):
         wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","Download Uncompleted Data", max_retry=1), max_retry=1); time.sleep(wait_time/wait_time);
     except:
         print("No 'uncompleted' data available for download.")
+    # Finally print the completion message
+    print("All available results data has been downloaded successfully for the current simulation.")
 
 
 # Supporting functions for the 'process_all_files' function below
