@@ -67,10 +67,10 @@ You can also add these to your .zshrc or .bashrc for persistence.
 
 ## Folder Structure
 
-| Path            | Description                                                                      |
-|-----------------|----------------------------------------------------------------------------------|
-| `data/inputs/`  | Input directory for your `questions_input_*.xlsx` and `sample_profiles_input_*.xlsx` files |
-| `data/outputs/` | Output directory for all downloaded result files                                |
+| Path            | Description                                                                                                                                                  |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `data/inputs/`  | Input directory for your `questions_input_*.xlsx` and `sample_profiles_input_*.xlsx` files (mandatory), and `sample_profiles_input_*.xlsx` files (optional). |
+| `data/outputs/` | Output directory for all downloaded result files                                                                                                             |
 
 
 ---
@@ -95,6 +95,7 @@ This will:
 
 Within run_simulations.py, edit the parameters dictionary to adjust simulation settings:
 
+```bash
 parameters = {
     "batch_survey": False,
     "reset_parameters": False,
@@ -108,13 +109,16 @@ parameters = {
     "justification": ["Yes"],
     "critic": ["No"],
     # Optional:
-    # "agent_role_prob_dist": "0.7;0.3",
-    # "justification_prompt": "Example prompt",
+    #"agent_role_prob_dist": "0.7;0.3",
+    #"justification_prompt": "Example prompt",
 }
+```
 
 You can also call process_all_files(...) with a specific_pattern argument to only run selected studies:
 
+``` bash
 specific_pattern = ['SMITH_STUDY_1', 'JONES_STUDY_A']
+```
 
 ---
 
