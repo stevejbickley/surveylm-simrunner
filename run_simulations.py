@@ -639,21 +639,20 @@ def download_results(driver,wait_time=5):
         #wait_and_click_element(driver,find_element_from_elements_via_text(driver,".//button[@kind='secondary' and @data-testid='baseButton-secondary']","Download Usage Data", max_retry=2), max_retry=2)
         wait_and_click_element(driver, find_element_from_elements_via_text(driver,
                                                                            ".//button[@kind='secondary' and @data-testid='stBaseButton-secondary']",
-                                                                           "Download Usage Data", max_retry=2),
-                               max_retry=2)
+                                                                           "Download Usage Data", max_retry=2), max_retry=2); time.sleep(wait_time/wait_time);
     except:
         print("No 'usage' data available for download.")
     wait_and_click_element(driver, find_element_from_elements_via_text(driver,".//button[@data-testid='stBaseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     #wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='baseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     try:
         #open_results_submenu(driver)
-        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@kind='secondary' and @data-testid='stBaseButton-secondary']","Download Completed Data", max_retry=2), max_retry=2)
+        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@kind='secondary' and @data-testid='stBaseButton-secondary']","Download Completed Data", max_retry=2), max_retry=2); time.sleep(wait_time/wait_time);
     except:
         print("No 'completed' data available for download.")
     wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","View Simulation Data")); time.sleep(wait_time);
     try:
         #open_results_submenu(driver)
-        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","Download Uncompleted Data", max_retry=1), max_retry=1);
+        wait_and_click_element(driver,find_element_from_elements_via_text(driver, ".//button[@data-testid='stBaseButton-secondaryFormSubmit']","Download Uncompleted Data", max_retry=1), max_retry=1); time.sleep(wait_time/wait_time);
     except:
         print("No 'uncompleted' data available for download.")
 
