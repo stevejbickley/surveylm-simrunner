@@ -1,6 +1,6 @@
 ##### ------ IMPORT FUNCTIONS ------- ####
 
-import os, sys, csv, time, glob, re, datetime,subprocess
+import os, sys, csv, time, glob, re, datetime, subprocess, json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -24,6 +24,20 @@ def dataframe_to_csv(filename, DataFrame):
     """Export entire DataFrame to csv."""
     output = DataFrame
     output.to_csv(filename, index=False)
+
+
+def load_parameters_from_file(param_path):
+    """
+    Load a parameters dictionary from a JSON file at `param_path`.
+    If you prefer another format (e.g., CSV or Excel), replace this function’s internals accordingly.
+    """
+    try:
+        with open(param_path, 'r', encoding='utf8') as f:
+            params = json.load(f)
+        return params
+    except Exception as e:
+        print(f"Warning: Failed to load parameters from '{param_path}': {e}")
+        return None
 
 
 # 2) Get html source source and write to txt file
@@ -92,6 +106,10 @@ def setup_selenium(download_path):
     options.add_experimental_option('useAutomationExtension', False)
     # Set up the default download directory
     prefs = {
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False,
+        # (If you also see “Chrome is being controlled by automated test software” infobar, you can disable that with:)
+        # "profile.default_content_setting_values.automatic_downloads": 1,
         "download.default_directory": download_path,
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
@@ -138,9 +156,10 @@ def wait_and_click_element(parent_element, element, wait_time=10, retry_time=3, 
 def ensure_all_keys(parameters):
     # Define all of the required keys
     required_keys = ["batch_survey", "reset_parameters", "test_run", "test_q", "model",
-                     "temperature_low", "temperature_high", "max_retries", "agent_role",
+                     "temperature_low", "temperature_high", "top_p_low", "top_p_high",
+                     "max_retries", "agent_role", "agent_count", "reasoning_effort", "reasoning_effort_prob_dist",
                      "justification", "critic", "agent_role_prob_dist", "justification_prob_dist",
-                     "critic_prob_dist", "justification_prompt", "critic_prompt", "agent_count"]
+                     "critic_prob_dist", "justification_prompt", "critic_prompt"]
     for key in required_keys:
         if key not in parameters:
             parameters[key] = ""
@@ -183,33 +202,50 @@ def upload_files(driver, survey_path, agent_path,wait_time=0.5):
     time.sleep(wait_time); wait_for_event_completion(driver, 'agent_upload', wait_time=1);  # wait until upload is completed
 
 
+def upload_files_new(driver, survey_path, agent_path,wait_time=0.5):
+    WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.XPATH, ".//button[contains(text(), 'Browse files')]")))
+    driver.find_element(By.XPATH, ".//section[@role='presentation' and @aria-label='Upload survey data']").find_element(By.XPATH,".//input[@type='file']").send_keys(survey_path)
+    time.sleep(wait_time); wait_for_event_completion(driver, 'survey_upload', wait_time=1);  # wait until upload is completed
+    driver.find_element(By.XPATH, ".//section[@role='presentation' and @aria-label='Upload agent profile data']").find_element(By.XPATH, ".//input[@type='file']").send_keys(agent_path)
+    time.sleep(wait_time); wait_for_event_completion(driver, 'agent_upload', wait_time=1);  # wait until upload is completed
+
+
 #Function to set the temperature range
-def set_temperature(driver, lower_temp, upper_temp):
+def set_slider_range(driver, lower_temp, upper_temp, slider_type='Temperature', wait_time=0.5):
     # Wait for the slider to be present
     slider_elements = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.XPATH, ".//div[@data-baseweb='slider']")))
     for slider_element in slider_elements:
         try:
             # Ensure the slider element is the temperature slider
-            slider_element.find_element(By.XPATH, ".//div[@aria-label='Temperature']")
+            slider_element.find_element(By.XPATH, f".//div[@aria-label='{slider_type}']")
             # Locate the slider thumbs
-            thumb_container = slider_element.find_elements(By.XPATH, ".//div[@aria-label='Temperature']")
+            thumb_container = slider_element.find_elements(By.XPATH, f".//div[@aria-label='{slider_type}']")
             lower_thumb = thumb_container[0]
             upper_thumb = thumb_container[1]
             # Calculate the move offsets
             slider_width = slider_element.size['width']
-            lower_offset = (float(lower_temp) / 1.5) * float(slider_width)
-            upper_offset = (float(upper_temp) / 1.5) * float(slider_width)
+            # Correct for the slider thumb width offset
+            if slider_type == 'Temperature':
+                lower_offset = (float(lower_temp) / 2.0) * float(slider_width)
+                upper_offset = (float(upper_temp) / 2.0) * float(slider_width)
+            elif slider_type == 'Top P':
+                lower_offset = (float(lower_temp) / 1.0) * float(slider_width)
+                upper_offset = (float(upper_temp) / 1.0) * float(slider_width)
             # Create action chain to move the sliders
-            actions = ActionChains(driver)
+            actions = ActionChains(driver); time.sleep(wait_time);
             # Reset sliders to the start position
-            actions.click_and_hold(lower_thumb).move_by_offset(-((float(lower_thumb.text)/ 1.5) * float(slider_width))+lower_thumb.size['width'], 0).release().perform()
-            actions.click_and_hold(upper_thumb).move_by_offset(-((float(upper_thumb.text)/ 1.5) * float(slider_width))+upper_thumb.size['width'], 0).release().perform()
+            if slider_type == 'Temperature':
+                actions.click_and_hold(lower_thumb).move_by_offset(-((float(lower_thumb.text)/ 2.0) * float(slider_width))+lower_thumb.size['width'], 0).release().perform(); time.sleep(wait_time);
+                actions.click_and_hold(upper_thumb).move_by_offset(-((float(upper_thumb.text)/ 2.0) * float(slider_width))+upper_thumb.size['width'], 0).release().perform(); time.sleep(wait_time);
+            elif slider_type == 'Top P':
+                actions.click_and_hold(lower_thumb).move_by_offset(-((float(lower_thumb.text)/ 1.0) * float(slider_width))+lower_thumb.size['width'], 0).release().perform(); time.sleep(wait_time);
+                actions.click_and_hold(upper_thumb).move_by_offset(-((float(upper_thumb.text)/ 1.0) * float(slider_width))+upper_thumb.size['width'], 0).release().perform(); time.sleep(wait_time);
             # Move sliders to the new positions
-            actions.click_and_hold(upper_thumb).move_by_offset(upper_offset, 0).release().perform()
-            actions.click_and_hold(lower_thumb).move_by_offset(lower_offset, 0).release().perform()
-        except Exception as e:
-            print(f"Error setting temperature: {e}")
+            actions.click_and_hold(upper_thumb).move_by_offset(upper_offset, 0).release().perform(); time.sleep(wait_time);
+            actions.click_and_hold(lower_thumb).move_by_offset(lower_offset, 0).release().perform(); time.sleep(wait_time);
+        except:
             pass
+
 
 
 # Function to clear text input fields manually by backspacing until they are empty strings
@@ -326,7 +362,7 @@ def set_parameters(driver, parameters):
     # First locate the 'Model Parameters' sub-menu in the 'Simulation' tab
     model_params_menu = find_simulation_menu(driver, 'Model Parameters'); time.sleep(5); #model_params_menu.click(); time.sleep(3); # NOTE: not sure if this will close the model_params_menu or not.. we don't want to close it but we do want to click somewhere in this container to focus on it in that sense..
     # 1) Enter the text inputs, if any...
-    for param in ['agent_role_prob_dist','justification_prob_dist','critic_prob_dist','justification_prompt','critic_prompt']:
+    for param in ['reasoning_effort_prob_dist','agent_role_prob_dist','justification_prob_dist','critic_prob_dist','justification_prompt','critic_prompt']:
         data = parameters[param]
         if data != "":
             if param == "agent_role_prob_dist": # Find the probability distribution WebElements for 'Role','Justification',and 'Critic' inputs
@@ -344,6 +380,9 @@ def set_parameters(driver, parameters):
             elif param == "critic_prompt":
                 critic_prompt_input = find_element_from_elements_via_text(model_params_menu,".//div[@data-testid='stTextArea']",'Critic Prompt')
                 critic_prompt_input.find_element(By.XPATH, ".//textarea[@aria-label='Critic Prompt']").send_keys(data)
+            elif param == "reasoning_effort_prob_dist":
+                reasoning_effort_prob_dist_input = find_element_from_elements_via_text(model_params_menu,".//div[@data-testid='stTextInput']",'Probability distribution for the reasoning effort parameter')
+                reasoning_effort_prob_dist_input.find_element(By.XPATH, ".//input[@type='text']").send_keys(data)
             else:
                 continue
         else:
@@ -400,7 +439,10 @@ def set_parameters(driver, parameters):
             else:
                 continue
     # 4) Enter into the temperature slider
-    set_temperature(driver, parameters['temperature_low'], parameters['temperature_high'])
+    #set_temperature(driver, parameters['temperature_low'], parameters['temperature_high'])
+    set_slider_range(driver, parameters['temperature_low'], parameters['temperature_high'], slider_type='Temperature')
+    set_slider_range(driver, parameters['top_p_low'], parameters['top_p_high'], slider_type='Top P')
+    # NOTE: set_top_p
     # 5) Next is the dropdown lists/boxes covering first the single-selection or single answer dropdowns only
     for param in ['model']: # Multiple choice, single answer only
         data = parameters[param]
@@ -429,7 +471,7 @@ def set_parameters(driver, parameters):
             else:
                 continue
     # 6) Next is the dropdown lists/boxes covering now the multi-selection or dropdowns where multiple answers are allowed
-    for param in ['agent_role', 'justification', 'critic']: # Multiple choice, multiple answers allowed
+    for param in ['agent_role', 'justification', 'critic', 'reasoning_effort']: # Multiple choice, multiple answers allowed
         data = parameters[param]
         if param == 'agent_role':
             element_name = 'Role'
@@ -437,6 +479,8 @@ def set_parameters(driver, parameters):
             element_name = 'Justification'
         elif param == 'critic':
             element_name = 'Critic'
+        elif param == 'reasoning_effort':
+            element_name = 'Reasoning effort'
         else:
             continue
         # Find the drop-down list
@@ -452,10 +496,13 @@ def set_parameters(driver, parameters):
                     select_dropdown_option(driver, element.find_element(By.XPATH,".//div[@data-baseweb='select']"), dat)
         else: # Default options - NOTE: need to finish
             if param == 'agent_role':
-                for dat in ['Person', 'Assistant', 'Language Model']:
+                for dat in ['Person', 'Assistant', 'Language Model', 'Group Assistant', 'Group']:
                     select_dropdown_option(driver, element.find_element(By.XPATH,".//div[@data-baseweb='select']"), dat)
             elif param in ['justification','critic']:
                 for dat in ['Yes', 'No']:
+                    select_dropdown_option(driver, element.find_element(By.XPATH,".//div[@data-baseweb='select']"), dat)
+            elif param == "reasoning_effort":
+                for dat in ['low', 'medium', 'high']:
                     select_dropdown_option(driver, element.find_element(By.XPATH,".//div[@data-baseweb='select']"), dat)
 
 
@@ -628,8 +675,22 @@ def extract_pattern(filename):
 def match_files(files, pattern):
     """Match question files with agent files based on the pattern."""
     question_files = [f for f in files if f.startswith(f"questions_input_{pattern}")]
-    agent_files = [f for f in files if f.startswith(f"sample_profiles_input_{pattern}")]
+    agent_files = [f for f in files if f.startswith(f"profiles_input_{pattern}")]
     return question_files, agent_files
+
+
+def match_files_with_params(files, pattern):
+    """
+    Match question files, agent files, and (optionally) a parameters file for a given pattern.
+    Returns three lists:
+      - question_files: [ "questions_input_{pattern}*.xlsx", ... ]
+      - agent_files:    [ "profiles_input_{pattern}*.xlsx", ... ]
+      - param_files:    [ "parameters_input_{pattern}*.json", ... ]  # JSON assumed
+    """
+    question_files = [f for f in files if f.startswith(f"questions_input_{pattern}")]
+    agent_files    = [f for f in files if f.startswith(f"profiles_input_{pattern}")]
+    param_files    = [f for f in files if f.startswith(f"parameters_input_{pattern}")]
+    return question_files, agent_files, param_files
 
 
 # Function to convert relative to absolute path
@@ -649,7 +710,7 @@ def process_all_files(driver, parameters, download_path, start_folder=".", wait_
         # Extract unique patterns from the filenames
         patterns = set()
         for file in files:
-            if file.startswith("questions_input_") or file.startswith("sample_profiles_input_"):
+            if file.startswith("questions_input_") or file.startswith("profiles_input_"):
                 pattern = extract_pattern(file)
                 patterns.add(pattern)
         # Convert patterns to a list and reverse if backwards_process is True
@@ -664,30 +725,71 @@ def process_all_files(driver, parameters, download_path, start_folder=".", wait_
             patterns = [str(pattern) for pattern in patterns if str(pattern) in specific_pattern]
         # Now begin the main run of simulations according to the matched question_files and agent_files of each pattern in patterns
         for pattern in patterns:
-            question_files, agent_files = match_files(files, pattern)
+            #question_files, agent_files = match_files(files, pattern)
+            question_files, agent_files, param_files = match_files_with_params(files, pattern)
             # Reverse the order of question_files and agent_files if backwards_process is True
             #if backwards_process:
                 #question_files.reverse()
                 #agent_files.reverse()
             for question_file in question_files:
                 for agent_file in agent_files:
-                    question_path = to_absolute_path(os.path.join(root, question_file))
-                    agent_path = to_absolute_path(os.path.join(root, agent_file))
-                    if os.path.exists(question_path) and os.path.exists(agent_path):
-                        driver.quit() # Close the old WebDriver
-                        # Initialize the WebDriver (e.g., for Chrome)
-                        driver = setup_selenium(download_path); time.sleep(wait_time)
-                        # Open the URL - note: use "https://surveylm.panalogy-lab.com/Platform" for the online version
-                        #driver.get("https://surveylm.panalogy-lab.com/Platform"); time.sleep(wait_time);
-                        driver.get("http://localhost:8501/Concept"); time.sleep(wait_time);
-                        login(driver, username, userid, email, password, api_key)
-                        #new_login(driver, email, password, api_key)
-                        upload_files(driver, question_path, agent_path)
-                        set_parameters(driver, parameters)
-                        run_estimation(driver)
-                        run_simulation(driver)
-                        download_results(driver)
-                        #internal_page_refresh_hard(driver,wait_time=5)
+                    if not param_files:  # If no parameter files are found
+                        question_path = to_absolute_path(os.path.join(root, question_file))
+                        agent_path = to_absolute_path(os.path.join(root, agent_file))
+                        param_path = to_absolute_path(os.path.join(root, param_file))
+                        if os.path.exists(question_path) and os.path.exists(agent_path):
+                            driver.quit()  # Close the old WebDriver
+                            # Initialize the WebDriver (e.g., for Chrome)
+                            driver = setup_selenium(download_path);
+                            time.sleep(wait_time)
+                            # Open the URL - note: use "https://surveylm.panalogy-lab.com/Platform" for the online version
+                            # driver.get("http://localhost:8501/Concept"); time.sleep(wait_time);
+                            # login(driver, username, userid, email, password, api_key)
+                            # upload_files(driver, question_path, agent_path)
+                            driver.get("https://surveylm.panalogy-lab.com/Platform");
+                            time.sleep(wait_time);
+                            new_login(driver, email, password, api_key)
+                            upload_files_new(driver, question_path, agent_path)
+                            # Determine which parameters to use:
+                            #    - Start with a shallow copy of default `parameters`
+                            run_params = parameters.copy()
+                            # Now set the parameters in the driver
+                            set_parameters(driver, run_params)
+                            run_estimation(driver)
+                            run_simulation(driver)
+                            download_results(driver)
+                            # internal_page_refresh_hard(driver,wait_time=5)
+                    else:
+                        for param_file in param_files:
+                            question_path = to_absolute_path(os.path.join(root, question_file))
+                            agent_path = to_absolute_path(os.path.join(root, agent_file))
+                            param_path = to_absolute_path(os.path.join(root, param_file))
+                            if os.path.exists(question_path) and os.path.exists(agent_path):
+                                driver.quit() # Close the old WebDriver
+                                # Initialize the WebDriver (e.g., for Chrome)
+                                driver = setup_selenium(download_path); time.sleep(wait_time)
+                                # Open the URL - note: use "https://surveylm.panalogy-lab.com/Platform" for the online version
+                                #driver.get("http://localhost:8501/Concept"); time.sleep(wait_time);
+                                #login(driver, username, userid, email, password, api_key)
+                                # upload_files(driver, question_path, agent_path)
+                                driver.get("https://surveylm.panalogy-lab.com/Platform"); time.sleep(wait_time);
+                                new_login(driver, email, password, api_key)
+                                upload_files_new(driver, question_path, agent_path)
+                                # Determine which parameters to use:
+                                #    - Start with a shallow copy of default `parameters`
+                                run_params = parameters.copy()
+                                #    - If there's a param file for this pattern, load & override
+                                if param_files:
+                                    # (take the first matching parameters_input_{pattern}.json)
+                                    loaded = load_parameters_from_file(param_path)
+                                    if isinstance(loaded, dict):
+                                        run_params.update(loaded)
+                                # Now set the parameters in the driver
+                                set_parameters(driver, run_params)
+                                run_estimation(driver)
+                                run_simulation(driver)
+                                download_results(driver)
+                                #internal_page_refresh_hard(driver,wait_time=5)
 
 
 ##### ------ NOW RUN THE SCRIPT ------- ####
@@ -697,115 +799,28 @@ if __name__ == "__main__":
     # Get current working directory
     CURR_PATH = os.getcwd()
     # Load credentials from environment variables
-    username = SURVEYLM_USERNAME = "Steve Bickley"
-    userid = os.getenv('SURVEYLM_USERID')
+    #username = SURVEYLM_USERNAME = "Steve Bickley"
+    #userid = os.getenv('SURVEYLM_USERID')
     email = os.getenv('SURVEYLM_EMAIL')
     password = os.getenv('SURVEYLM_PASSWORD')
     api_key = os.getenv('SURVEYLM_APIKEY')
     # Set parameters dictionary
     parameters = {"batch_survey": False, "reset_parameters": False, "test_run": False, "test_q": 5,
-                  "model": "GPT-3.5-Turbo",
+                  "model": "GPT-4o-mini", "top_p_low": 0.00, "top_p_high": 0.00,
                   "temperature_low": 0.00, "temperature_high": 0.00, "max_retries": 5,
                   "agent_role": ["Person"], "justification": ["Yes", "No"],
                   "critic": ["No"]}
     #              "agent_role_prob_dist": "0.8;0.2", "justification_prob_dist": "0.8;0.2"}
     # Setup the download path for the simulation outputs
-    download_path = CURR_PATH + "/data/simulations/"
+    download_path = CURR_PATH + "/data/outputs/"
     driver = setup_selenium(download_path)
     try:
         # Run for all files in the start_folder
-        process_all_files(driver=driver, parameters=parameters, download_path=download_path, start_folder=CURR_PATH + '/simulation_outputs/inputs/', backwards_process=False, crawl_subfolders=False, specific_pattern=None)
+        process_all_files(driver=driver, parameters=parameters, download_path=download_path, start_folder=CURR_PATH + '/data/inputs/', backwards_process=False, crawl_subfolders=False, specific_pattern=None)
         # (Optional) Run only select files in the start_folder
-        #process_all_files(driver=driver, parameters=parameters, download_path=download_path, start_folder=CURR_PATH + '/simulation_outputs/inputs/', backwards_process=False, crawl_subfolders=False,specific_pattern=['SRIVASTAVA_STUDY', 'TARIQ_STUDY_1', 'TARIQ_STUDY_2'])
+        #process_all_files(driver=driver, parameters=parameters, download_path=download_path, start_folder=CURR_PATH + '/data/inputs/', backwards_process=False, crawl_subfolders=False,specific_pattern=['SRIVASTAVA_STUDY', 'TARIQ_STUDY_1', 'TARIQ_STUDY_2'])
     except:
         print('Oh no! An error has occurred...')
     # Now let's close the driver
     finally:
         driver.quit()
-
-
-##### ------ TESTING ONLY ------- ####
-
-# Get current working directory
-#CURR_PATH = os.getcwd()
-
-# Define the other key file paths
-#question_path = CURR_PATH + '/simulation_outputs/inputs/questions_input_DOOTSON_STUDY_ROBOT_H1.xlsx'
-#agent_path = CURR_PATH + '/simulation_outputs/inputs/sample_profiles_input_DOOTSON_STUDY_v2_agents_output.xlsx'
-#download_path = CURR_PATH + "/simulation_outputs/"
-
-# simulation and outputs
-allfiles = glob.glob(download_path + '/inputs/questions_input_'+'*.xlsx') + glob.glob(download_path + '/inputs/sample_profiles_input_'+'*.xlsx')
-allfiles_questions_only = glob.glob(download_path + '/inputs/questions_input_'+'*.xlsx')
-allfiles_profiles_only = glob.glob(download_path + '/inputs/sample_profiles_input_'+'*.xlsx')
-
-# Load credentials from environment variables
-#username = SURVEYLM_USERNAME = "Steve Bickley"
-#userid = os.getenv('SURVEYLM_USERID')
-#email = os.getenv('SURVEYLM_EMAIL')
-#password = os.getenv('SURVEYLM_PASSWORD')
-#api_key = os.getenv('SURVEYLM_APIKEY')
-
-#Note: 
-#You can either supply these directly or set environment variables, create config .ini files, etc.
-
-#For example: 
-#export SURVEYLM_USERNAME="Your Name"
-
-#Alternatively: 
-#echo 'export SURVEYLM_USERNAME="Steven Bickley"' >> ~/.zshrc
-#source ~/.zshrc
-#username = os.getenv('SURVEYLM_USERNAME')
-
-# Initialise the "driver" and the associated selenium session
-#driver = setup_selenium(download_path)
-
-# Open the URL - note: use "https://surveylm.panalogy-lab.com/Platform" for the online version
-#driver.get("http://localhost:8501/Concept")
-#time.sleep(5)
-
-# Login to SurveyLM platform
-#login(driver,username,userid,email,password,api_key)
-
-# Set parameters dictionary - default
-#parameters = {"batch_survey":True,"reset_parameters":False,"test_run":True,"test_q":5,"model":"GPT-3.5-Turbo",
-#              "temperature_low":0.00,"temperature_high":0.50,"max_retries":5,
-#              "agent_role":["Person","Assistant","Language Model"],"justification":["Yes","No"],"critic":["Yes","No"],
-#              "agent_role_prob_dist":"0.33;0.33;0.34","justification_prob_dist":"0.5;0.5","critic_prob_dist":"0.5;0.5",
-#              "justification_prompt":"Person:The justification should consider and remain grounded in your profile;Assistant:The justification should consider and remain grounded in the person's profile;Language Model:The justification should consider and remain grounded in your knowledge and training",
-#              "critic_prompt":"Person:The analysis should be coherent and thoughtful, whilst remaining grounded in your profile;Assistant:The analysis should be coherent and thoughtful, whilst remaining grounded in the person's profile;Language Model:The analysis should be coherent and thoughtful, whilst remaining grounded in your knowledge and training as a language model"}
-
-
-# Set parameters dictionary
-#parameters = {"batch_survey": True, "reset_parameters": False, "test_run": False, "test_q": 5,
-#                  "model": "GPT-3.5-Turbo",
-#                  "temperature_low": 0.00, "temperature_high": 0.00, "max_retries": 5,
-#                  "agent_role": ["Person","Assistant"], "justification": ["Yes", "No"],
-#                  "critic": ["No"],
-#                  "agent_role_prob_dist": "0.8;0.2", "justification_prob_dist": "0.8;0.2"}
-
-
-
-# Run process all files function
-#process_all_files(driver, parameters, CURR_PATH + '/simulation_outputs/inputs/')
-
-# Upload agent and survey files
-#upload_files(driver, question_path, agent_path, wait_time=1)
-
-# Get parameters ready for simulation
-#set_parameters(driver, parameters)
-
-# Run estimation
-#run_estimation(driver,wait_time=1)
-
-# Run simulation
-#run_simulation(driver,wait_time=1)
-
-# Call the download_results function
-#download_results(driver)
-
-# Close the WebDriver after completion
-#driver.quit()
-
-# ----------------------------------------------------------------------------------------------------------------------
-

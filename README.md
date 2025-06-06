@@ -36,6 +36,12 @@ poetry install
 To activate the environment:
 
 ```bash
+source ./.venv/bin/activate
+```
+
+or if you prefer to use Poetry's shell:
+
+```bash
 poetry shell
 ```
 
