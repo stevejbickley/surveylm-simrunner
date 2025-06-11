@@ -69,7 +69,7 @@ You can also add these to your .zshrc or .bashrc for persistence.
 
 | Path            | Description                                                                                                                                                  |
 |-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `data/inputs/`  | Input directory for your `questions_input_*.xlsx` and `sample_profiles_input_*.xlsx` files (mandatory), and `sample_profiles_input_*.xlsx` files (optional). |
+| `data/inputs/`  | Input directory for your `questions_input_*.xlsx` and `profiles_input_*.xlsx` files (mandatory), and `parameters_input_*.xlsx` files (optional). |
 | `data/outputs/` | Output directory for all downloaded result files                                                                                                             |
 
 
@@ -85,7 +85,7 @@ poetry run python run_simulations.py
 
 This will:
 
-1. Look for input files in simulation_outputs/inputs/
+1. Look for input files in /data/inputs/
 2. Match question and agent profile files based on filename patterns
 3. Launch Selenium, run simulations via the SurveyLM platform, and download results
 
